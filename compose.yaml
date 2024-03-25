@@ -1,0 +1,62 @@
+version: "3.8"
+
+networks:
+  safekey:
+    ipam:
+      driver: default
+      config:
+        - subnet: '172.15.0.0/16'
+
+services:
+  api:
+    image: "victobonetti/safekey.api:2024.1.1"
+    container_name: "safekey-api"
+    restart: always
+    environment:
+      - DB_HOST_IP=172.15.0.3
+      - FRONTEND_URL=http://172.15.0.8:8080
+      - DB_USER=postgres
+      - DB_PASS=MtavkDxUjVrwBhZ.954QNP
+      - DB_NAME=safekey
+      - CLIENT_SECRET=1111111111111111111111111111111111111111111111111
+    networks:
+      safekey:
+        ipv4_address: '172.15.0.2'
+    depends_on:
+      db:
+        condition: "service_healthy"
+
+  frontend:
+    image: "victobonetti/safekey.front:2024.1.1"
+    container_name: "safekey-front"
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      safekey:
+        ipv4_address: '172.15.0.8'
+    depends_on:
+        api:
+          condition: "service_started"
+
+  db:
+    image: "postgres:latest"
+    user: postgres
+    container_name: "safekey-db"
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=MtavkDxUjVrwBhZ.954QNP
+      - POSTGRES_DB=safekey
+    ports:
+      - "5432:5432"
+    networks:
+      safekey:
+        ipv4_address: '172.15.0.3'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "safekey"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+
+# volumes:
+#   - "{{ dados_docker_dir_path }}/{{ postgres_container_name }}/:/var/lib/postgresql/data"
